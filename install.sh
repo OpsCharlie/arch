@@ -188,23 +188,30 @@ ln -sf /usr/lib/systemd/system/grub-btrfsd.service \
 # -----------------------------
 # SNAPPER (first boot safe)
 # -----------------------------
-cat <<'EOF2' > /etc/systemd/system/firstboot-snapper.service
+cat <<'EOS' > /usr/local/bin/firstboot-snapper.sh
+#!/bin/bash
+set -e
+
+if ! snapper -c root list-configs | grep -q root; then
+    snapper -c root create-config /
+    sed -i 's/TIMELINE_CREATE=.*/TIMELINE_CREATE=no/' /etc/snapper/configs/root
+    snapper create -d "initial snapshot"
+fi
+
+systemctl disable firstboot-snapper.service
+rm -f /etc/systemd/system/firstboot-snapper.service
+EOS
+
+chmod +x /usr/local/bin/firstboot-snapper.sh
+
+cat <<EOF2 > /etc/systemd/system/firstboot-snapper.service
 [Unit]
-Description=Snapper init
+Description=Snapper first boot init
 After=multi-user.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/bash -c '
-if [ ! -f /etc/snapper/configs/root ]; then
-    snapper -c root create-config /
-    sed -i "s/TIMELINE_CREATE=.*/TIMELINE_CREATE=no/" /etc/snapper/configs/root
-    snapper create -d "initial snapshot"
-fi
-systemctl disable firstboot-snapper.service
-rm -f /etc/systemd/system/firstboot-snapper.service
-'
-
+ExecStart=/usr/local/bin/firstboot-snapper.sh
 RemainAfterExit=yes
 
 [Install]
