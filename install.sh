@@ -56,7 +56,7 @@ btrfs subvolume create /mnt/@snapshots
 umount /mnt
 
 mount -o subvol=@ /dev/mapper/cryptroot /mnt
-mkdir -p /mnt/{home,boot,.snapshots}
+mkdir -p /mnt/{home,boot}
 
 mount -o subvol=@home /dev/mapper/cryptroot /mnt/home
 mount "$EFI" /mnt/boot
