@@ -53,12 +53,11 @@ mount /dev/mapper/cryptroot /mnt
 
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
-btrfs subvolume create /mnt/@snapshots
 
 umount /mnt
 
 mount -o subvol=@ /dev/mapper/cryptroot /mnt
-mkdir -p /mnt/{home,.snapshots,boot}
+mkdir -p /mnt/home /mnt/.snapshots /mnt/boot
 
 mount -o subvol=@home /dev/mapper/cryptroot /mnt/home
 mount "$EFI" /mnt/boot
@@ -188,10 +187,7 @@ echo "$USERNAME:$USER_PW" | chpasswd
 
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
-# -----------------------------
-# SERVICES (SYMLINK METHOD)
-# -----------------------------
-
+# services via symlinks
 ln -sf /usr/lib/systemd/system/NetworkManager.service \
 /etc/systemd/system/multi-user.target.wants/NetworkManager.service
 
@@ -209,21 +205,15 @@ if [ "$SYSTEM_TYPE" = "physical" ]; then
 fi
 
 # -----------------------------
-# SNAPPER (NO TIMELINE / NO HOURLY)
+# SNAPPER
 # -----------------------------
-
-echo "[INFO] Snapper will be initialized on first boot"
-
 ln -sf /usr/lib/systemd/system/grub-btrfsd.service \
 /etc/systemd/system/multi-user.target.wants/grub-btrfsd.service
 
-# -----------------------------
-# FIRST BOOT SERVICE
-# -----------------------------
-
+# first boot init only
 cat <<'EOF2' > /etc/systemd/system/firstboot-snapper.service
 [Unit]
-Description=First boot Snapper initialization (minimal mode)
+Description=First boot Snapper initialization
 After=multi-user.target
 
 [Service]
