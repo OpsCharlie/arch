@@ -188,16 +188,28 @@ echo "$USERNAME:$USER_PW" | chpasswd
 
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
-# services (SAFE ENABLE MODE)
-systemctl --root=/mnt enable NetworkManager
-systemctl --root=/mnt enable gdm
+# -----------------------------
+# SERVICES (SYMLINK METHOD)
+# -----------------------------
 
+# NetworkManager
+ln -sf /usr/lib/systemd/system/NetworkManager.service \
+/etc/systemd/system/multi-user.target.wants/NetworkManager.service
+
+# GDM (display manager)
+ln -sf /usr/lib/systemd/system/gdm.service \
+/etc/systemd/system/display-manager.service
+
+# VM
 if [ "$SYSTEM_TYPE" = "vm" ]; then
-    systemctl --root=/mnt enable qemu-guest-agent || true
+    ln -sf /usr/lib/systemd/system/qemu-guest-agent.service \
+    /etc/systemd/system/multi-user.target.wants/qemu-guest-agent.service
 fi
 
+# Laptop power
 if [ "$SYSTEM_TYPE" = "physical" ]; then
-    systemctl --root=/mnt enable tlp
+    ln -sf /usr/lib/systemd/system/tlp.service \
+    /etc/systemd/system/multi-user.target.wants/tlp.service
 fi
 
 # -----------------------------
@@ -207,38 +219,8 @@ snapper -c root create-config /
 
 sed -i 's/TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/' /etc/snapper/configs/root
 
-systemctl --root=/mnt enable grub-btrfsd || true
-
-# pacman hooks
-mkdir -p /etc/pacman.d/hooks
-
-cat <<EOT > /etc/pacman.d/hooks/50-snapper-pre.hook
-[Trigger]
-Operation = Install
-Operation = Upgrade
-Operation = Remove
-Type = Package
-Target = *
-
-[Action]
-Description = Snapper PRE snapshot
-When = PreTransaction
-Exec = /usr/bin/snapper create -t pre -d "pacman pre"
-EOT
-
-cat <<EOT > /etc/pacman.d/hooks/50-snapper-post.hook
-[Trigger]
-Operation = Install
-Operation = Upgrade
-Operation = Remove
-Type = Package
-Target = *
-
-[Action]
-Description = Snapper POST snapshot
-When = PostTransaction
-Exec = /usr/bin/snapper create -t post -d "pacman post"
-EOT
+ln -sf /usr/lib/systemd/system/grub-btrfsd.service \
+/etc/systemd/system/multi-user.target.wants/grub-btrfsd.service
 
 EOF
 
