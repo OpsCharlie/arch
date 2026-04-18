@@ -127,7 +127,9 @@ GNOME_PERF=(
 )
 
 GNOME_POWER=(
-    git vim gnome-tweaks gnome-extensions-app dconf-editor
+  git vim gnome-tweaks dconf-editor
+  gnome-shell-extensions
+  gnome-browser-connector
 )
 
 EXTRA_PKGS=()
