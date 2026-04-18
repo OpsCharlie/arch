@@ -1,109 +1,55 @@
 # Arch Linux Install — UEFI + LUKS
 
-## 1. Partitioning
+Automated install script handles partitioning, LUKS, GRUB, users, and network.
+
+## Quick Start (from Arch ISO)
 
 ```bash
-lsblk
-cgdisk /dev/vda
+loadkeys be-latin1
+pacman -Sy git
+git clone https://github.com/OpsCharlie/arch.git
+./arch/install.sh
 ```
 
-- `/dev/vda1` → EFI (512MB, hex code ef00)
-- `/dev/vda2` → LUKS (remaining, hex code 8300)
+Script prompts for:
+- Username
+- LUKS password
+- Root password
+- User password
+
+## Manual Steps (after reboot)
+### Install GNOME
 
 ```bash
-mkfs.fat -F32 /dev/vda1
+pacman -S gnome gdm pipewire pipewire-pulse pipewire-jack wireplumber
+systemctl enable gdm
+reboot
 ```
 
-## 2. LUKS encryption
+## What the script does
 
+1. **Partitioning** — EFI (512MB) + LUKS partition
+2. **LUKS encryption** — encrypts root with password
+3. **Base system** — installs base, linux, grub, vim, sudo, networkmanager, git
+4. **Locale/Timezone** — en_US.UTF-8, Europe/Brussels, be-latin1 keymap
+5. **mkinitcpio** — keyboard, keymap, encrypt hooks for LUKS
+6. **GRUB** — configured with cryptdevice for LUKS unlock
+7. **User** — creates user in wheel group, enables sudo
+8. **NetworkManager** — enabled for network config
+
+
+## Troubleshooting
+
+**No LUKS prompt at boot?**
 ```bash
-cryptsetup luksFormat /dev/vda2
+# From ISO
 cryptsetup open /dev/vda2 cryptroot
-```
-
-## 3. Filesystems and mount
-
-```bash
-mkfs.ext4 /dev/mapper/cryptroot
 mount /dev/mapper/cryptroot /mnt
-mkdir -p /mnt/boot
 mount /dev/vda1 /mnt/boot
-```
-
-## 4. Base system
-
-```bash
-pacstrap /mnt base linux linux-firmware grub efibootmgr base-devel vim
-genfstab -U /mnt >> /mnt/etc/fstab
+mount --bind /proc /mnt/proc
+mount --bind /dev /mnt/dev
+mount --bind /sys /mnt/sys
+mount --bind /run /mnt/run
 arch-chroot /mnt
 ```
-
-## 5. Locale and timezone
-
-```bash
-echo "KEYMAP=be-latin1" > /etc/vconsole.conf
-echo "LANG=en_US.UTF-8" > /etc/locale.conf
-ln -sf /usr/share/zoneinfo/Europe/Brussels /etc/localtime
-vim /etc/locale.gen  # uncomment en_US.UTF-8
-locale-gen
-hwclock --systohc
-```
-
-## 6. Initramfs
-
-```bash
-vim /etc/mkinitcpio.conf
-# HOOKS=(base udev autodetect modconf block encrypt fsck)
-mkinitcpio -P
-```
-
-## 7. GRUB
-
-```bash
-vim /etc/default/grub
-# GRUB_CMDLINE_LINUX_DEFAULT="cryptdevice=UUID=$(blkid -s UUID -o value /dev/vda2):cryptroot"
-grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
-grub-mkconfig -o /boot/grub/grub.cfg
-```
-
-## 8. Root password and exit
-
-```bash
-passwd
-exit
-umount -R /mnt
-reboot
-```
-
-## 9. Network (running system)
-
-```bash
-ip link set enp1s0 up
-vim /etc/systemd/network/enp1s0.network
-# Add: [Match] Name=enp1s0, [Network] DHCP=ipv4
-systemctl enable --now systemd-networkd
-systemctl enable --now systemd-resolved
-```
-
-## 10. User and sudo
-
-```bash
-useradd -m -G wheel your_username
-passwd your_username
-pacman -S sudo
-EDITOR=vim visudo
-# Uncomment: %wheel ALL=(ALL) ALL
-```
-
-## 11. GUI (GNOME)
-
-```bash
-pacman -Syyu
-pacman -S gnome gnome-shell gdm networkmanager
-systemctl enable gdm NetworkManager
-systemctl disable systemd-networkd
-reboot
-```
-
-Start GNOME from login or with `startx`.
 
