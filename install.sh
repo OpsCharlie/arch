@@ -8,9 +8,8 @@ DEVICE="/dev/${DISK}"
 
 echo "Using disk: $DEVICE"
 
-read -r -p "Enter username: " USERNAME
 read -r -s -p "Enter LUKS password: " LUKS_PW; echo
-read -r -s -p "Enter root password: " ROOT_PW; echo
+read -r -p "Enter username: " USERNAME
 read -r -s -p "Enter user password: " USER_PW; echo
 
 # -----------------------------
@@ -103,7 +102,7 @@ BASE_PKGS=(
     networkmanager
     pipewire pipewire-pulse pipewire-jack wireplumber
     btrfs-progs snapper snap-pac grub-btrfs inotify-tools
-    $UCODE tlp
+    "$UCODE" tlp
 )
 
 GNOME_PKGS=(
@@ -161,7 +160,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 # users
 useradd -m -G wheel "$USERNAME"
-echo "root:$ROOT_PW" | chpasswd
+passwd -l root
 echo "$USERNAME:$USER_PW" | chpasswd
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
@@ -192,9 +191,12 @@ cat <<'EOS' > /usr/local/bin/firstboot-snapper.sh
 #!/bin/bash
 set -e
 
-if ! snapper -c root list-configs | grep -q root; then
+if [ ! -e /etc/snapper/configs/root ]; then
     snapper -c root create-config /
-    sed -i 's/TIMELINE_CREATE=.*/TIMELINE_CREATE=no/' /etc/snapper/configs/root
+    sed -i \
+        -e 's/^TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/' \
+        -e 's/^TIMELINE_CLEANUP=.*/TIMELINE_CLEANUP="no"/' \
+        /etc/snapper/configs/root
     snapper create -d "initial snapshot"
 fi
 
