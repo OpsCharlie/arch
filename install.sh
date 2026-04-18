@@ -52,7 +52,7 @@ echo "[6] Configure system..."
 genfstab -U /mnt > /mnt/etc/fstab
 
 arch-chroot /mnt /bin/bash <<'EOF'
-set -e
+set -ex
 
 echo "KEYMAP=be-latin1" > /etc/vconsole.conf
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
@@ -61,7 +61,7 @@ sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
 locale-gen
 hwclock --systohc
 
-sed -i 's/HOOKS=(base udev autodetect modconf block keyboard keymap encrypt filesystems fsck)/HOOKS=(base udev autodetect modconf block encrypt fsck)/' /etc/mkinitcpio.conf
+sed -i 's/HOOKS=(.*)/HOOKS=(base udev autodetect modconf block encrypt fsck)/' /etc/mkinitcpio.conf
 mkinitcpio -P
 
 UUID=$(blkid -s UUID -o value "$LUKS")
