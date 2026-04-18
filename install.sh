@@ -102,7 +102,7 @@ BASE_PKGS=(
     grub efibootmgr base-devel git sudo vim nano
     networkmanager
     pipewire pipewire-pulse pipewire-jack wireplumber
-    btrfs-progs snapper grub-btrfs inotify-tools
+    btrfs-progs snapper snap-pac grub-btrfs inotify-tools
     $UCODE tlp
 )
 
