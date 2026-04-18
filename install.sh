@@ -127,9 +127,9 @@ GNOME_PERF=(
 )
 
 GNOME_POWER=(
-  git vim gnome-tweaks dconf-editor
-  gnome-shell-extensions
-  gnome-browser-connector
+    git vim gnome-tweaks dconf-editor
+    gnome-shell-extensions
+    gnome-browser-connector
 )
 
 EXTRA_PKGS=()
@@ -188,16 +188,16 @@ echo "$USERNAME:$USER_PW" | chpasswd
 
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
-# services
-systemctl enable NetworkManager
-systemctl enable gdm
+# services (SAFE ENABLE MODE)
+systemctl --root=/mnt enable NetworkManager
+systemctl --root=/mnt enable gdm
 
 if [ "$SYSTEM_TYPE" = "vm" ]; then
-    systemctl enable qemu-guest-agent || true
+    systemctl --root=/mnt enable qemu-guest-agent || true
 fi
 
 if [ "$SYSTEM_TYPE" = "physical" ]; then
-    systemctl enable tlp
+    systemctl --root=/mnt enable tlp
 fi
 
 # -----------------------------
@@ -207,7 +207,7 @@ snapper -c root create-config /
 
 sed -i 's/TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/' /etc/snapper/configs/root
 
-systemctl enable grub-btrfsd || true
+systemctl --root=/mnt enable grub-btrfsd || true
 
 # pacman hooks
 mkdir -p /etc/pacman.d/hooks
