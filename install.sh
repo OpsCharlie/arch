@@ -10,7 +10,7 @@ read -r -s -p "Enter LUKS password: " LUKS_PW; echo
 read -r -s -p "Enter root password: " ROOT_PW; echo
 read -r -s -p "Enter user password: " USER_PW; echo
 
-export USERNAME ROOT_PW USER_PW
+export USERNAME ROOT_PW USER_PW LUKS DISK
 DEVICE="/dev/${DISK}"
 case "$DISK" in
     nvme*) EFI="${DEVICE}p1"; LUKS="${DEVICE}p2" ;;
