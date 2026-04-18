@@ -192,35 +192,64 @@ sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 # SERVICES (SYMLINK METHOD)
 # -----------------------------
 
-# NetworkManager
 ln -sf /usr/lib/systemd/system/NetworkManager.service \
 /etc/systemd/system/multi-user.target.wants/NetworkManager.service
 
-# GDM (display manager)
 ln -sf /usr/lib/systemd/system/gdm.service \
 /etc/systemd/system/display-manager.service
 
-# VM
 if [ "$SYSTEM_TYPE" = "vm" ]; then
     ln -sf /usr/lib/systemd/system/qemu-guest-agent.service \
     /etc/systemd/system/multi-user.target.wants/qemu-guest-agent.service
 fi
 
-# Laptop power
 if [ "$SYSTEM_TYPE" = "physical" ]; then
     ln -sf /usr/lib/systemd/system/tlp.service \
     /etc/systemd/system/multi-user.target.wants/tlp.service
 fi
 
 # -----------------------------
-# SNAPPER
+# SNAPPER (NO TIMELINE / NO HOURLY)
 # -----------------------------
-snapper -c root create-config /
 
-sed -i 's/TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/' /etc/snapper/configs/root
+echo "[INFO] Snapper will be initialized on first boot"
 
 ln -sf /usr/lib/systemd/system/grub-btrfsd.service \
 /etc/systemd/system/multi-user.target.wants/grub-btrfsd.service
+
+# -----------------------------
+# FIRST BOOT SERVICE
+# -----------------------------
+
+cat <<'EOF2' > /etc/systemd/system/firstboot-snapper.service
+[Unit]
+Description=First boot Snapper initialization (minimal mode)
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash -c '
+if [ ! -f /etc/snapper/configs/root ]; then
+    snapper -c root create-config /
+
+    sed -i "s/TIMELINE_CREATE=.*/TIMELINE_CREATE=\"no\"/" /etc/snapper/configs/root
+    sed -i "s/TIMELINE_CLEANUP=.*/TIMELINE_CLEANUP=\"no\"/" /etc/snapper/configs/root
+
+    snapper create -t single -d "initial baseline snapshot"
+fi
+
+systemctl disable firstboot-snapper.service
+rm -f /etc/systemd/system/firstboot-snapper.service
+'
+
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF2
+
+ln -sf /etc/systemd/system/firstboot-snapper.service \
+/etc/systemd/system/multi-user.target.wants/firstboot-snapper.service
 
 EOF
 
