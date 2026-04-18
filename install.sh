@@ -197,11 +197,6 @@ sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 systemctl enable NetworkManager
 systemctl enable gdm
 
-# VM extras
-if [ "$SYSTEM_TYPE" = "vm" ]; then
-    systemctl enable spice-vdagentd
-fi
-
 # LAPTOP extras
 if [ "$SYSTEM_TYPE" = "physical" ]; then
     systemctl enable tlp
