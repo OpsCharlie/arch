@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== Arch Linux FULL AUTO INSTALL (VM/LAPTOP + GPU + SNAPSHOT) ==="
+echo "=== Arch Linux FULL AUTO INSTALL (VM/LAPTOP + GPU + SNAPSHOT + GRUB-BTRFS) ==="
 
 DISK=$(lsblk -d -n -o NAME,TYPE | grep 'disk$' | awk '{print $1}' | head -1)
 DEVICE="/dev/${DISK}"
@@ -14,7 +14,7 @@ read -r -s -p "Enter root password: " ROOT_PW; echo
 read -r -s -p "Enter user password: " USER_PW; echo
 
 # -----------------------------
-# Detect VM vs physical
+# VM or physical
 # -----------------------------
 SYSTEM_TYPE="physical"
 if systemd-detect-virt -q 2>/dev/null; then
@@ -23,14 +23,13 @@ fi
 echo "[*] System type: $SYSTEM_TYPE"
 
 # -----------------------------
-# Partition mapping
+# Partitioning
 # -----------------------------
 case "$DISK" in
     nvme*) EFI="${DEVICE}p1"; LUKS_DEV="${DEVICE}p2" ;;
     *)     EFI="${DEVICE}1";  LUKS_DEV="${DEVICE}2" ;;
 esac
 
-echo "[1] Partitioning..."
 parted -s "$DEVICE" mklabel gpt
 parted -s "$DEVICE" mkpart ESP fat32 1MiB 513MiB
 parted -s "$DEVICE" set 1 esp on
@@ -45,25 +44,25 @@ printf "%s" "$LUKS_PW" | cryptsetup luksFormat "$LUKS_DEV" -
 printf "%s" "$LUKS_PW" | cryptsetup open "$LUKS_DEV" cryptroot -
 
 # -----------------------------
-# BTRFS layout
+# BTRFS
 # -----------------------------
 mkfs.btrfs /dev/mapper/cryptroot
-
 mount /dev/mapper/cryptroot /mnt
 
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
+btrfs subvolume create /mnt/@snapshots
 
 umount /mnt
 
 mount -o subvol=@ /dev/mapper/cryptroot /mnt
-mkdir -p /mnt/home /mnt/.snapshots /mnt/boot
+mkdir -p /mnt/{home,boot,.snapshots}
 
 mount -o subvol=@home /dev/mapper/cryptroot /mnt/home
 mount "$EFI" /mnt/boot
 
 # -----------------------------
-# GPU detection
+# GPU detect
 # -----------------------------
 detect_gpu() {
     if lspci | grep -qi "nvidia"; then
@@ -78,31 +77,22 @@ detect_gpu() {
 }
 
 GPU=$(detect_gpu)
-echo "[*] GPU detected: $GPU"
 
-CPU_VENDOR=$(lscpu | grep "Vendor ID" | awk '{print $3}')
-
+CPU_VENDOR=$(lscpu | awk '/Vendor ID/ {print $3}')
 if [ "$CPU_VENDOR" = "GenuineIntel" ]; then
     UCODE="intel-ucode"
 else
     UCODE="amd-ucode"
 fi
 
+GPU_PKGS=()
 case "$GPU" in
-    intel)
-        GPU_PKGS="mesa vulkan-intel intel-media-driver"
-        ;;
-    amd)
-        GPU_PKGS="mesa vulkan-radeon libva-mesa-driver"
-        ;;
-    nvidia)
-        GPU_PKGS="nvidia nvidia-utils nvidia-settings"
-        ;;
+    intel) GPU_PKGS=(mesa vulkan-intel intel-media-driver) ;;
+    amd) GPU_PKGS=(mesa vulkan-radeon libva-mesa-driver) ;;
+    nvidia) GPU_PKGS=(nvidia nvidia-utils nvidia-settings) ;;
 esac
 
-if [ "$SYSTEM_TYPE" = "vm" ]; then
-    GPU_PKGS=""
-fi
+[ "$SYSTEM_TYPE" = "vm" ] && GPU_PKGS=()
 
 # -----------------------------
 # Packages
@@ -112,50 +102,39 @@ BASE_PKGS=(
     grub efibootmgr base-devel git sudo vim nano
     networkmanager
     pipewire pipewire-pulse pipewire-jack wireplumber
-    btrfs-progs snapper grub-btrfs $UCODE tlp
+    btrfs-progs snapper grub-btrfs inotify-tools
+    $UCODE tlp
 )
 
-GNOME_BASE=(
+GNOME_PKGS=(
     gnome-shell gnome-session gnome-control-center gdm
     nautilus gvfs xdg-desktop-portal-gnome
-)
-
-GNOME_PERF=(
     gnome-console gnome-system-monitor gnome-text-editor
     gnome-disk-utility gnome-keyring loupe sushi
-)
-
-GNOME_POWER=(
-    git vim gnome-tweaks dconf-editor
-    gnome-shell-extensions
-    gnome-browser-connector
+    gnome-software packagekit flatpak
+    gnome-tweaks dconf-editor
+    gnome-shell-extensions gnome-browser-connector
 )
 
 EXTRA_PKGS=()
-
-if [ "$SYSTEM_TYPE" = "vm" ]; then
-    EXTRA_PKGS+=(qemu-guest-agent)
-fi
+[ "$SYSTEM_TYPE" = "vm" ] && EXTRA_PKGS+=(qemu-guest-agent)
 
 # -----------------------------
-# Install system
+# Install
 # -----------------------------
 pacstrap /mnt \
     "${BASE_PKGS[@]}" \
     "${EXTRA_PKGS[@]}" \
-    $GPU_PKGS \
-    "${GNOME_BASE[@]}" \
-    "${GNOME_PERF[@]}" \
-    "${GNOME_POWER[@]}"
+    "${GPU_PKGS[@]}" \
+    "${GNOME_PKGS[@]}"
 
 genfstab -U /mnt >> /mnt/etc/fstab
+
+UUID=$(blkid -s UUID -o value "$LUKS_DEV")
 
 # -----------------------------
 # CHROOT
 # -----------------------------
-
-UUID=$(blkid -s UUID -o value "$LUKS_DEV")
-
 arch-chroot /mnt /bin/bash <<EOF
 set -e
 
@@ -170,7 +149,7 @@ hwclock --systohc
 
 echo "archlinux" > /etc/hostname
 
-# mkinitcpio
+# initramfs
 sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block keyboard keymap encrypt filesystems fsck)/' /etc/mkinitcpio.conf
 mkinitcpio -P
 
@@ -184,10 +163,9 @@ grub-mkconfig -o /boot/grub/grub.cfg
 useradd -m -G wheel "$USERNAME"
 echo "root:$ROOT_PW" | chpasswd
 echo "$USERNAME:$USER_PW" | chpasswd
-
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
-# services via symlinks
+# services (symlinks)
 ln -sf /usr/lib/systemd/system/NetworkManager.service \
 /etc/systemd/system/multi-user.target.wants/NetworkManager.service
 
@@ -204,16 +182,15 @@ if [ "$SYSTEM_TYPE" = "physical" ]; then
     /etc/systemd/system/multi-user.target.wants/tlp.service
 fi
 
-# -----------------------------
-# SNAPPER
-# -----------------------------
 ln -sf /usr/lib/systemd/system/grub-btrfsd.service \
 /etc/systemd/system/multi-user.target.wants/grub-btrfsd.service
 
-# first boot init only
+# -----------------------------
+# SNAPPER (first boot safe)
+# -----------------------------
 cat <<'EOF2' > /etc/systemd/system/firstboot-snapper.service
 [Unit]
-Description=First boot Snapper initialization
+Description=Snapper init
 After=multi-user.target
 
 [Service]
@@ -221,13 +198,9 @@ Type=oneshot
 ExecStart=/usr/bin/bash -c '
 if [ ! -f /etc/snapper/configs/root ]; then
     snapper -c root create-config /
-
-    sed -i "s/TIMELINE_CREATE=.*/TIMELINE_CREATE=\"no\"/" /etc/snapper/configs/root
-    sed -i "s/TIMELINE_CLEANUP=.*/TIMELINE_CLEANUP=\"no\"/" /etc/snapper/configs/root
-
-    snapper create -t single -d "initial baseline snapshot"
+    sed -i "s/TIMELINE_CREATE=.*/TIMELINE_CREATE=no/" /etc/snapper/configs/root
+    snapper create -d "initial snapshot"
 fi
-
 systemctl disable firstboot-snapper.service
 rm -f /etc/systemd/system/firstboot-snapper.service
 '
@@ -240,6 +213,11 @@ EOF2
 
 ln -sf /etc/systemd/system/firstboot-snapper.service \
 /etc/systemd/system/multi-user.target.wants/firstboot-snapper.service
+
+# -----------------------------
+# Flatpak
+# -----------------------------
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 EOF
 
