@@ -81,11 +81,6 @@ detect_gpu() {
 GPU=$(detect_gpu)
 echo "[*] GPU detected: $GPU"
 
-GPU_PKGS=""
-
-# -----------------------------
-# CPU microcode + GPU packages
-# -----------------------------
 CPU_VENDOR=$(lscpu | grep "Vendor ID" | awk '{print $3}')
 
 if [ "$CPU_VENDOR" = "GenuineIntel" ]; then
@@ -106,63 +101,63 @@ case "$GPU" in
         ;;
 esac
 
-# VM safety (skip GPU drivers if needed)
 if [ "$SYSTEM_TYPE" = "vm" ]; then
     GPU_PKGS=""
 fi
 
 # -----------------------------
-# Base packages
+# Packages
 # -----------------------------
-BASE_PKGS="base linux linux-headers linux-firmware \
-grub efibootmgr base-devel git sudo vim nano \
-networkmanager \
-gnome gdm \
-pipewire pipewire-pulse pipewire-jack wireplumber \
-btrfs-progs snapper grub-btrfs $UCODE tlp"
-
-GNOME_PKGS=(
-  baobab decibels epiphany gnome-backgrounds
-  gnome-calculator gnome-calendar gnome-characters
-  gnome-clocks gnome-color-manager
-  gnome-connections gnome-console gnome-contacts
-  gnome-control-center gnome-disk-utility
-  gnome-font-viewer gnome-keyring gnome-logs
-  gnome-maps gnome-menus gnome-music
-  gnome-remote-desktop gnome-session
-  gnome-settings-daemon gnome-shell
-  gnome-software gnome-system-monitor
-  gnome-text-editor gnome-tour
-  gnome-user-docs gnome-user-share
-  gnome-weather grilo-plugins gst-thumbnailers
-  gvfs gvfs-afc gvfs-dnssd gvfs-goa gvfs-gphoto2
-  gvfs-mtp gvfs-nfs gvfs-onedrive gvfs-smb gvfs-wsdd
-  loupe malcontent nautilus orca papers rygel showtime
-  simple-scan snapshot sushi tecla
-  xdg-desktop-portal-gnome xdg-user-dirs-gtk yelp
+BASE_PKGS=(
+    base linux linux-headers linux-firmware
+    grub efibootmgr base-devel git sudo vim nano
+    networkmanager
+    pipewire pipewire-pulse pipewire-jack wireplumber
+    btrfs-progs snapper grub-btrfs $UCODE tlp
 )
 
+GNOME_BASE=(
+    gnome-shell gnome-session gnome-control-center gdm
+    nautilus gvfs xdg-desktop-portal-gnome
+)
 
-EXTRA_PKGS=""
+GNOME_PERF=(
+    gnome-console gnome-system-monitor gnome-text-editor
+    gnome-disk-utility gnome-keyring loupe sushi
+)
+
+GNOME_POWER=(
+    git vim gnome-tweaks gnome-extensions-app dconf-editor
+)
+
+EXTRA_PKGS=()
 
 if [ "$SYSTEM_TYPE" = "vm" ]; then
-    EXTRA_PKGS="qemu-guest-agent"
+    EXTRA_PKGS+=(qemu-guest-agent)
 fi
 
 # -----------------------------
 # Install system
 # -----------------------------
-pacstrap /mnt $BASE_PKGS $EXTRA_PKGS $GPU_PKGS "${GNOME_PKGS[@]}"
+pacstrap /mnt \
+    "${BASE_PKGS[@]}" \
+    "${EXTRA_PKGS[@]}" \
+    $GPU_PKGS \
+    "${GNOME_BASE[@]}" \
+    "${GNOME_PERF[@]}" \
+    "${GNOME_POWER[@]}"
 
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # -----------------------------
 # CHROOT
 # -----------------------------
+
+UUID=$(blkid -s UUID -o value "$LUKS_DEV")
+
 arch-chroot /mnt /bin/bash <<EOF
 set -e
 
-# locale
 echo "KEYMAP=be-latin1" > /etc/vconsole.conf
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
 
@@ -174,14 +169,12 @@ hwclock --systohc
 
 echo "archlinux" > /etc/hostname
 
-# mkinitcpio (LUKS)
+# mkinitcpio
 sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block keyboard keymap encrypt filesystems fsck)/' /etc/mkinitcpio.conf
 mkinitcpio -P
 
 # GRUB
-UUID=\$(blkid -s UUID -o value "$LUKS_DEV")
-
-sed -i "s|GRUB_CMDLINE_LINUX=\"\"|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=\$UUID:cryptroot root=/dev/mapper/cryptroot\"|" /etc/default/grub
+sed -i "s|GRUB_CMDLINE_LINUX=\"\"|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$UUID:cryptroot root=/dev/mapper/cryptroot\"|" /etc/default/grub
 
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
 grub-mkconfig -o /boot/grub/grub.cfg
@@ -197,21 +190,26 @@ sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 systemctl enable NetworkManager
 systemctl enable gdm
 
-# LAPTOP extras
+if [ "$SYSTEM_TYPE" = "vm" ]; then
+    systemctl enable qemu-guest-agent || true
+fi
+
 if [ "$SYSTEM_TYPE" = "physical" ]; then
     systemctl enable tlp
 fi
 
 # -----------------------------
-# SNAPPER setup
+# SNAPPER
 # -----------------------------
 snapper -c root create-config /
 
 sed -i 's/TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/' /etc/snapper/configs/root
 
-systemctl enable grub-btrfsd.service
+systemctl enable grub-btrfsd || true
 
-# pacman PRE snapshot
+# pacman hooks
+mkdir -p /etc/pacman.d/hooks
+
 cat <<EOT > /etc/pacman.d/hooks/50-snapper-pre.hook
 [Trigger]
 Operation = Install
@@ -226,7 +224,6 @@ When = PreTransaction
 Exec = /usr/bin/snapper create -t pre -d "pacman pre"
 EOT
 
-# pacman POST snapshot
 cat <<EOT > /etc/pacman.d/hooks/50-snapper-post.hook
 [Trigger]
 Operation = Install
