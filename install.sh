@@ -148,9 +148,9 @@ pacstrap /mnt \
     "${GPU_PKGS[@]}" \
     "${GNOME_PKGS[@]}"
 
-genfstab -U /mnt >> /mnt/etc/fstab
+genfstab -U /mnt >>/mnt/etc/fstab
 
-grep -q '^/swap/swapfile ' /mnt/etc/fstab || echo "/swap/swapfile none swap defaults 0 0" >> /mnt/etc/fstab
+grep -q '^/swap/swapfile ' /mnt/etc/fstab || echo "/swap/swapfile none swap defaults 0 0" >>/mnt/etc/fstab
 
 UUID=$(blkid -s UUID -o value "$LUKS_DEV")
 
@@ -168,7 +168,7 @@ fi
 # CHROOT
 # -----------------------------
 arch-chroot /mnt /bin/bash <<EOF
-set -ex
+set -e
 
 echo "KEYMAP=be-latin1" > /etc/vconsole.conf
 
