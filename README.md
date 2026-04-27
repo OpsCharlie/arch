@@ -12,35 +12,26 @@ git clone https://github.com/OpsCharlie/arch.git
 ```
 
 Script prompts for:
-- Username
 - LUKS password
 - Root password
 - User password
 
-## Manual Steps (after reboot)
-### Install GNOME
-
-```bash
-pacman -S gnome gdm pipewire pipewire-pulse pipewire-jack wireplumber
-systemctl enable gdm
-reboot
-```
 
 ## What the script does
 
-1. **Partitioning** — EFI (512MB) + LUKS partition
+1. **Partitioning** — EFI (512MB) + LUKS partition, btrfs root partition
 2. **LUKS encryption** — encrypts root with password
 3. **Base system** — installs base, linux, grub, vim, sudo, networkmanager, git
-4. **Locale/Timezone** — en_US.UTF-8, Europe/Brussels, be-latin1 keymap
-5. **mkinitcpio** — keyboard, keymap, encrypt hooks for LUKS
-6. **GRUB** — configured with cryptdevice for LUKS unlock
-7. **User** — creates user in wheel group, enables sudo
-8. **NetworkManager** — enabled for network config
+4. **Snapper** — Configures Snapper for snapshots pre/post package installs 
+5. **Locale/Timezone** — en_US.UTF-8, Europe/Brussels, be-latin1 keymap
+6. **mkinitcpio** — keyboard, keymap, encrypt hooks for LUKS
+7. **GRUB** — configured with cryptdevice for LUKS unlock
+8. **User** — creates user in wheel group, enables sudo
+9. **NetworkManager** — enabled for network config
 
 
 ## Troubleshooting
 
-**No LUKS prompt at boot?**
 ```bash
 # From ISO
 cryptsetup open /dev/vda2 cryptroot
