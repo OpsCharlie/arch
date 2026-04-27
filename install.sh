@@ -91,12 +91,15 @@ detect_gpu() {
 
 GPU=$(detect_gpu)
 
-CPU_VENDOR=$(lscpu | awk '/Vendor ID/ {print $3}')
-if [ "$CPU_VENDOR" = "GenuineIntel" ]; then
-    UCODE="intel-ucode"
-else
-    UCODE="amd-ucode"
-fi
+CPU_VENDOR=$(awk -F': ' '/^vendor_id/ {print $2; exit}' /proc/cpuinfo)
+case "$CPU_VENDOR" in
+    GenuineIntel) UCODE="intel-ucode" ;;
+    AuthenticAMD) UCODE="amd-ucode" ;;
+    *)
+        echo "Unsupported CPU vendor: '$CPU_VENDOR'" >&2
+        exit 1
+        ;;
+esac
 
 GPU_PKGS=()
 case "$GPU" in
