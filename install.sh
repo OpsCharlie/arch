@@ -169,6 +169,9 @@ pacstrap /mnt \
 
 genfstab -U /mnt >>/mnt/etc/fstab
 
+# Add noatime + compress=zstd to all btrfs entries
+sed -i -E 's|(^\S+\s+\S+\s+btrfs\s+)([^ \t]+)|\1\2,noatime,compress=zstd:3|' /mnt/etc/fstab
+
 grep -q '^/swap/swapfile ' /mnt/etc/fstab || echo "/swap/swapfile none swap defaults 0 0" >>/mnt/etc/fstab
 
 UUID=$(blkid -s UUID -o value "$LUKS_DEV")
@@ -242,6 +245,10 @@ fi
 
 if [ "$SYSTEM_TYPE" = "physical" ]; then
     systemctl enable tlp.service
+fi
+
+if [ "$IS_SSD" = "1" ]; then
+    systemctl enable fstrim.timer
 fi
 
 
