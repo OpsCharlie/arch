@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+cleanup() {
+    set +e
+    umount -R /mnt 2>/dev/null
+    cryptsetup close cryptroot 2>/dev/null
+}
+trap cleanup ERR
+
 echo "=== Arch Linux FULL AUTO INSTALL (VM/LAPTOP + GPU + SNAPSHOT + GRUB-BTRFS) ==="
 
 DISK=$(lsblk -d -n -o NAME,TYPE | grep 'disk$' | awk '{print $1}' | head -1)
@@ -150,6 +157,7 @@ GNOME_PKGS=(
 
 EXTRA_PKGS=()
 [ "$SYSTEM_TYPE" = "vm" ] && EXTRA_PKGS+=(qemu-guest-agent)
+[ "$GPU" = "intel" ] && [ "$SYSTEM_TYPE" != "vm" ] && EXTRA_PKGS+=(sof-firmware)
 
 # -----------------------------
 # Install
@@ -183,7 +191,7 @@ NVIDIA_MODULES=""
 NVIDIA_CMDLINE=""
 if [ "$GPU" = "nvidia" ] && [ "$SYSTEM_TYPE" != "vm" ]; then
     NVIDIA_MODULES="nvidia nvidia_modeset nvidia_uvm nvidia_drm"
-    NVIDIA_CMDLINE=" nvidia-drm.modeset=1"
+    NVIDIA_CMDLINE=" nvidia-drm.modeset=1 nvidia-drm.fbdev=1"
 fi
 
 # -----------------------------
@@ -218,6 +226,9 @@ sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block keyboard keymap en
 if [ -n "$NVIDIA_MODULES" ]; then
     sed -i "s/^MODULES=.*/MODULES=($NVIDIA_MODULES)/" /etc/mkinitcpio.conf
 fi
+# Disable fallback preset (saves ~50% of /boot initramfs space)
+sed -i "s/^PRESETS=.*/PRESETS=('default')/" /etc/mkinitcpio.d/linux.preset
+rm -f /boot/initramfs-linux-fallback.img
 mkinitcpio -P
 
 # GRUB
@@ -238,7 +249,7 @@ visudo -cf /etc/sudoers.d/10-wheel
 # -----------------------------
 systemctl enable NetworkManager.service
 systemctl enable gdm.service
-systemctl enable grub-btrfsd.service --root=/
+systemctl enable grub-btrfsd.service
 systemctl enable systemd-timesyncd.service
 
 if [ "$SYSTEM_TYPE" = "vm" ]; then
