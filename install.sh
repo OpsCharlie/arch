@@ -8,9 +8,11 @@ DEVICE="/dev/${DISK}"
 
 echo "Using disk: $DEVICE"
 
-read -r -s -p "Enter LUKS password: " LUKS_PW; echo
+read -r -s -p "Enter LUKS password: " LUKS_PW
+echo
 read -r -p "Enter username: " USERNAME
-read -r -s -p "Enter user password: " USER_PW; echo
+read -r -s -p "Enter user password: " USER_PW
+echo
 
 # -----------------------------
 # VM or physical
@@ -25,15 +27,21 @@ echo "[*] System type: $SYSTEM_TYPE"
 # Partitioning
 # -----------------------------
 case "$DISK" in
-    nvme*) EFI="${DEVICE}p1"; LUKS_DEV="${DEVICE}p2" ;;
-    *)     EFI="${DEVICE}1";  LUKS_DEV="${DEVICE}2" ;;
+  nvme*)
+    EFI="${DEVICE}p1"
+    LUKS_DEV="${DEVICE}p2"
+    ;;
+  *)
+    EFI="${DEVICE}1"
+    LUKS_DEV="${DEVICE}2"
+    ;;
 esac
 
 parted --script "$DEVICE" \
-   mklabel gpt \
-   mkpart ESP fat32 1MiB 513MiB \
-   set 1 esp on \
-   mkpart cryptroot 513MiB 100%
+    mklabel gpt \
+    mkpart ESP fat32 1MiB 513MiB \
+    set 1 esp on \
+    mkpart cryptroot 513MiB 100%
 
 mkfs.fat -F32 -n EFI "$EFI"
 
