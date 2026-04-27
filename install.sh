@@ -221,7 +221,7 @@ fi
 mkinitcpio -P
 
 # GRUB
-sed -i "s|GRUB_CMDLINE_LINUX=\"\"|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$UUID:cryptroot root=/dev/mapper/cryptroot$NVIDIA_CMDLINE\"|" /etc/default/grub
+sed -i "s|GRUB_CMDLINE_LINUX=\"\"|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$UUID:cryptroot$DISCARD_CMDLINE root=/dev/mapper/cryptroot$NVIDIA_CMDLINE\"|" /etc/default/grub
 
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
 
