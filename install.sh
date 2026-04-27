@@ -229,7 +229,9 @@ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
 useradd -m -G wheel "$USERNAME"
 passwd -l root
 echo "$USERNAME:$USER_PW" | chpasswd
-sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
+echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/10-wheel
+chmod 440 /etc/sudoers.d/10-wheel
+visudo -cf /etc/sudoers.d/10-wheel
 
 # -----------------------------
 # Services
