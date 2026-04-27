@@ -215,6 +215,7 @@ sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 systemctl enable NetworkManager.service
 systemctl enable gdm.service
 systemctl enable grub-btrfsd.service --root=/
+systemctl enable systemd-timesyncd.service
 
 if [ "$SYSTEM_TYPE" = "vm" ]; then
     systemctl enable qemu-guest-agent.service
