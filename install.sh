@@ -269,6 +269,8 @@ mount /.snapshots
 sed -i \
     -e 's/^TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/' \
     -e 's/^TIMELINE_CLEANUP=.*/TIMELINE_CLEANUP="no"/' \
+    -e 's/^ALLOW_GROUPS=.*/ALLOW_GROUPS="wheel"/' \
+    -e 's/^SYNC_ACL=.*/SYNC_ACL="yes"/' \
     /etc/snapper/configs/root
 snapper --no-dbus create \
     --read-write \
