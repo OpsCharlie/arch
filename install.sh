@@ -143,7 +143,7 @@ BASE_PKGS=(
     base base-devel btrfs-progs efibootmgr git grub grub-btrfs
     inotify-tools less linux linux-firmware linux-headers logrotate
     man-db man-pages nano networkmanager pipewire pipewire-jack
-    pipewire-pulse pipewire-alsa snap-pac snap-pac-grub snapper sudo tlp vim wireplumber
+    pipewire-pulse pipewire-alsa snap-pac snapper sudo tlp vim wireplumber
     "$UCODE"
 )
 
