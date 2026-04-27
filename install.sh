@@ -135,6 +135,13 @@ EXTRA_PKGS=()
 # -----------------------------
 # Install
 # -----------------------------
+reflector \
+    --country Belgium,Netherlands,Germany,France \
+    --age 12 \
+    --protocol https \
+    --sort rate \
+    --save /etc/pacman.d/mirrorlist
+
 pacstrap /mnt \
     "${BASE_PKGS[@]}" \
     "${EXTRA_PKGS[@]}" \
