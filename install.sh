@@ -148,7 +148,6 @@ arch-chroot /mnt /bin/bash <<EOF
 set -ex
 
 echo "KEYMAP=be-latin1" > /etc/vconsole.conf
-echo "LANG=en_US.UTF-8" > /etc/locale.conf
 
 ln -sf /usr/share/zoneinfo/Europe/Brussels /etc/localtime
 
