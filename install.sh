@@ -46,10 +46,27 @@ parted --script "$DEVICE" \
 mkfs.fat -F32 -n EFI "$EFI"
 
 # -----------------------------
+# SSD detection (for TRIM/discard)
+# -----------------------------
+IS_SSD=0
+if [ "$SYSTEM_TYPE" != "vm" ] && [ -r "/sys/block/${DISK}/queue/rotational" ] && [ "$(cat /sys/block/${DISK}/queue/rotational)" = "0" ]; then
+    IS_SSD=1
+fi
+echo "[*] SSD detected: $IS_SSD"
+
+LUKS_OPEN_OPTS=""
+DISCARD_CMDLINE=""
+if [ "$IS_SSD" = "1" ]; then
+    LUKS_OPEN_OPTS="--allow-discards --perf-no_read_workqueue --perf-no_write_workqueue"
+    DISCARD_CMDLINE=":allow-discards"
+fi
+
+# -----------------------------
 # LUKS
 # -----------------------------
 printf "%s" "$LUKS_PW" | cryptsetup luksFormat "$LUKS_DEV" -
-printf "%s" "$LUKS_PW" | cryptsetup open "$LUKS_DEV" cryptroot -
+# shellcheck disable=SC2086
+printf "%s" "$LUKS_PW" | cryptsetup open $LUKS_OPEN_OPTS "$LUKS_DEV" cryptroot -
 
 # -----------------------------
 # BTRFS
