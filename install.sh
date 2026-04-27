@@ -105,7 +105,7 @@ GPU_PKGS=()
 case "$GPU" in
     intel) GPU_PKGS=(mesa vulkan-intel intel-media-driver) ;;
     amd) GPU_PKGS=(mesa vulkan-radeon libva-mesa-driver) ;;
-    nvidia) GPU_PKGS=(nvidia nvidia-utils nvidia-settings) ;;
+    nvidia) GPU_PKGS=(nvidia-dkms nvidia-utils nvidia-settings) ;;
 esac
 
 [ "$SYSTEM_TYPE" = "vm" ] && GPU_PKGS=()
@@ -148,6 +148,16 @@ grep -q '^/swap/swapfile ' /mnt/etc/fstab || echo "/swap/swapfile none swap defa
 UUID=$(blkid -s UUID -o value "$LUKS_DEV")
 
 # -----------------------------
+# NVIDIA tweaks (KMS + early load)
+# -----------------------------
+NVIDIA_MODULES=""
+NVIDIA_CMDLINE=""
+if [ "$GPU" = "nvidia" ] && [ "$SYSTEM_TYPE" != "vm" ]; then
+    NVIDIA_MODULES="nvidia nvidia_modeset nvidia_uvm nvidia_drm"
+    NVIDIA_CMDLINE=" nvidia-drm.modeset=1"
+fi
+
+# -----------------------------
 # CHROOT
 # -----------------------------
 arch-chroot /mnt /bin/bash <<EOF
@@ -176,10 +186,13 @@ echo "archlinux" > /etc/hostname
 
 # initramfs
 sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block keyboard keymap encrypt filesystems fsck)/' /etc/mkinitcpio.conf
+if [ -n "$NVIDIA_MODULES" ]; then
+    sed -i "s/^MODULES=.*/MODULES=($NVIDIA_MODULES)/" /etc/mkinitcpio.conf
+fi
 mkinitcpio -P
 
 # GRUB
-sed -i "s|GRUB_CMDLINE_LINUX=\"\"|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$UUID:cryptroot root=/dev/mapper/cryptroot\"|" /etc/default/grub
+sed -i "s|GRUB_CMDLINE_LINUX=\"\"|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$UUID:cryptroot root=/dev/mapper/cryptroot$NVIDIA_CMDLINE\"|" /etc/default/grub
 
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
 
