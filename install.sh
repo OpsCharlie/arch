@@ -59,18 +59,20 @@ mount /dev/mapper/cryptroot /mnt
 
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
+btrfs subvolume create /mnt/@log
 btrfs subvolume create /mnt/@swap
 btrfs subvolume create /mnt/@snapshots
 
 umount /mnt
 
 mount -o subvol=@ /dev/mapper/cryptroot /mnt
-mkdir -p /mnt/{home,boot,swap,.snapshots}
+mkdir -p /mnt/{home,boot,swap,.snapshots,var/log}
 
 mount -o subvol=@swap /dev/mapper/cryptroot /mnt/swap
 btrfs filesystem mkswapfile --size 4g --uuid clear /mnt/swap/swapfile
 
 mount -o subvol=@home /dev/mapper/cryptroot /mnt/home
+mount -o subvol=@log /dev/mapper/cryptroot /mnt/var/log
 mount -o subvol=@snapshots /dev/mapper/cryptroot /mnt/.snapshots
 mount "$EFI" /mnt/boot
 
