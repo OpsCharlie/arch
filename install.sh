@@ -27,14 +27,14 @@ echo "[*] System type: $SYSTEM_TYPE"
 # Partitioning
 # -----------------------------
 case "$DISK" in
-  nvme*)
-    EFI="${DEVICE}p1"
-    LUKS_DEV="${DEVICE}p2"
-    ;;
-  *)
-    EFI="${DEVICE}1"
-    LUKS_DEV="${DEVICE}2"
-    ;;
+    nvme*)
+        EFI="${DEVICE}p1"
+        LUKS_DEV="${DEVICE}p2"
+        ;;
+    *)
+        EFI="${DEVICE}1"
+        LUKS_DEV="${DEVICE}2"
+        ;;
 esac
 
 parted --script "$DEVICE" \
@@ -73,7 +73,6 @@ btrfs filesystem mkswapfile --size 4g --uuid clear /mnt/swap/swapfile
 mount -o subvol=@home /dev/mapper/cryptroot /mnt/home
 mount -o subvol=@snapshots /dev/mapper/cryptroot /mnt/.snapshots
 mount "$EFI" /mnt/boot
-
 
 # -----------------------------
 # GPU detect
