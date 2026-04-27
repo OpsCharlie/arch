@@ -60,11 +60,7 @@ mount -o subvol=@ /dev/mapper/cryptroot /mnt
 mkdir -p /mnt/{home,boot,swap,.snapshots}
 
 mount -o subvol=@swap /dev/mapper/cryptroot /mnt/swap
-truncate -s 0 /mnt/swap/swapfile
-chattr +C /mnt/swap/swapfile
-fallocate -l 4G /mnt/swap/swapfile
-chmod 600 /mnt/swap/swapfile
-mkswap /mnt/swap/swapfile
+btrfs filesystem mkswapfile --size 4g --uuid clear /mnt/swap/swapfile
 
 mount -o subvol=@home /dev/mapper/cryptroot /mnt/home
 mount -o subvol=@snapshots /dev/mapper/cryptroot /mnt/.snapshots
