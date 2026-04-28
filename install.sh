@@ -284,12 +284,6 @@ snapper --no-dbus create \
     --description "initial install"
 
 grub-mkconfig -o /boot/grub/grub.cfg
-
-# -----------------------------
-# Flatpak
-# -----------------------------
-#flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
 EOF
 
 echo "[DONE] Cleanup..."
