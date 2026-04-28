@@ -56,18 +56,20 @@ mkfs.fat -F32 -n EFI "$EFI"
 # SSD detection (for TRIM/discard)
 # -----------------------------
 IS_SSD=0
-if [ "$SYSTEM_TYPE" != "vm" ] && [ -r "/sys/block/${DISK}/queue/rotational" ] && [ "$(cat /sys/block/${DISK}/queue/rotational)" = "0" ]; then
-    IS_SSD=1
-fi
-echo "[*] SSD detected: $IS_SSD"
 
 LUKS_OPEN_OPTS=""
 DISCARD_CMDLINE=""
-if [ "$IS_SSD" = "1" ]; then
+BTRFS_OPTS="noatime,compress=zstd:3,space_cache=v2"
+if [ "$SYSTEM_TYPE" != "vm" ] && [ -r "/sys/block/${DISK}/queue/rotational" ] && [ "$(cat /sys/block/${DISK}/queue/rotational)" = "0" ]; then
+    IS_SSD=1
     LUKS_OPEN_OPTS="--allow-discards --perf-no_read_workqueue --perf-no_write_workqueue"
     DISCARD_CMDLINE=":allow-discards"
+    BTRFS_OPTS+=",ssd,discard=async"
+else
+    BTRFS_OPTS+=",autodefrag"
 fi
 
+echo "[*] SSD detected: $IS_SSD"
 # -----------------------------
 # LUKS
 # -----------------------------
@@ -171,7 +173,7 @@ pacstrap /mnt \
 genfstab -U /mnt >>/mnt/etc/fstab
 
 # Add noatime + compress=zstd to all btrfs entries
-sed -i -E 's|(^\S+\s+\S+\s+btrfs\s+)([^ \t]+)|\1\2,noatime,compress=zstd:3|' /mnt/etc/fstab
+sed -i -E "s|(^\S+\s+\S+\s+btrfs\s+)([^ \t]+)|\1\2,$BTRFS_OPTS|" /mnt/etc/fstab
 
 grep -q '^/swap/swapfile ' /mnt/etc/fstab || echo "/swap/swapfile none swap defaults 0 0" >>/mnt/etc/fstab
 
