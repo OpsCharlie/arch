@@ -142,23 +142,23 @@ esac
 # Packages
 # -----------------------------
 BASE_PKGS=(
-    base base-devel btrfs-progs efibootmgr git grub grub-btrfs
-    inotify-tools less linux linux-firmware linux-headers logrotate
-    man-db man-pages nano networkmanager pipewire pipewire-jack
-    pipewire-pulse pipewire-alsa snap-pac snapper sudo tlp vim wireplumber
+    base base-devel bash-completion btrfs-progs efibootmgr git grub grub-btrfs
+    inotify-tools less linux linux-firmware linux-headers logrotate man-db
+    man-pages networkmanager pipewire pipewire-alsa pipewire-jack pipewire-pulse
+    python python-pip snap-pac snapper sudo tlp vim wireplumber
     "$UCODE"
 )
 
 GNOME_PKGS=(
-    dconf-editor gdm gnome-browser-connector gnome-console
-    gnome-control-center gnome-disk-utility gnome-keyring gnome-session
-    gnome-shell gnome-shell-extensions gnome-software gnome-system-monitor
+    dconf-editor extension-manager gdm gnome-console gnome-control-center
+    gnome-disk-utility gnome-keyring gnome-session gnome-shell
+    gnome-shell-extensions gnome-software gnome-system-monitor
     gnome-text-editor gnome-tweaks gvfs gvfs-smb loupe nautilus packagekit
     sushi xdg-desktop-portal-gnome
 )
 
-EXTRA_PKGS=()
-[ "$SYSTEM_TYPE" = "vm" ] && EXTRA_PKGS+=(qemu-guest-agent)
+EXTRA_PKGS=(ansible)
+[ "$SYSTEM_TYPE" = "vm" ] && EXTRA_PKGS+=(qemu-guest-agent spice-vdagent)
 [ "$GPU" = "intel" ] && [ "$SYSTEM_TYPE" != "vm" ] && EXTRA_PKGS+=(sof-firmware)
 
 # -----------------------------
