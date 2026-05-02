@@ -154,7 +154,7 @@ GNOME_PKGS=(
     gnome-disk-utility gnome-keyring gnome-session gnome-shell
     gnome-shell-extensions gnome-software gnome-system-monitor
     gnome-text-editor gnome-tweaks gvfs gvfs-smb loupe nautilus packagekit
-    sushi xdg-desktop-portal-gnome
+    seahorse sushi xdg-desktop-portal-gnome
 )
 
 EXTRA_PKGS=(ansible)
