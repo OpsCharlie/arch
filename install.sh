@@ -152,9 +152,10 @@ BASE_PKGS=(
 GNOME_PKGS=(
     dconf-editor extension-manager gdm gnome-console gnome-control-center
     gnome-disk-utility gnome-keyring gnome-session gnome-shell
-    gnome-shell-extensions gnome-software gnome-system-monitor
-    gnome-text-editor gnome-tweaks gvfs gvfs-smb loupe nautilus packagekit
-    seahorse sushi xdg-desktop-portal-gnome
+    gnome-shell-extensions gnome-shell-extension-appindicator gnome-software
+    gnome-system-monitor gnome-text-editor gnome-tweaks gvfs gvfs-smb
+    libappindicator-gtk3 loupe nautilus packagekit seahorse sushi
+    xdg-desktop-portal-gnome
 )
 
 EXTRA_PKGS=(ansible)
