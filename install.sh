@@ -10,7 +10,8 @@ trap cleanup ERR
 
 echo "=== Arch Linux FULL AUTO INSTALL (VM/LAPTOP + GPU + SNAPSHOT + GRUB-BTRFS) ==="
 
-DISK=$(lsblk -d -n -o NAME,TYPE | grep 'disk$' | awk '{print $1}' | head -1)
+DISK=$(lsblk -d -n -o NAME,TYPE | awk '/disk$/ {print $1}' | grep 'nvme' | head -1)
+[ -z "$DISK" ] && DISK=$(lsblk -d -n -o NAME,TYPE | awk '/disk$/ {print $1}' | head -1)
 DEVICE="/dev/${DISK}"
 
 echo "Using disk: $DEVICE"
